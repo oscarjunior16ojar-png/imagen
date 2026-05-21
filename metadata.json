@@ -1,0 +1,6 @@
+{
+  "name": "Gestor de Archivos y Fotos",
+  "description": "Una aplicación web interactiva para subir, almacenar, organizar y previsualizar archivos y fotos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
