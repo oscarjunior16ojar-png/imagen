@@ -9,9 +9,10 @@ interface FileCardProps {
   onPreview: (file: StoredFile) => void;
   onDelete: (id: string) => void | Promise<void>;
   onEdit: (file: StoredFile) => void;
+  readOnly?: boolean;
 }
 
-export default function FileCard({ file, onPreview, onDelete, onEdit }: FileCardProps) {
+export default function FileCard({ file, onPreview, onDelete, onEdit, readOnly = false }: FileCardProps) {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [menuOpen, setMenuOpen] = useState(false);
   const category = determineFileCategory(file.type, file.name);
@@ -116,26 +117,30 @@ export default function FileCard({ file, onPreview, onDelete, onEdit }: FileCard
           >
             <Download className="w-4 h-4 text-emerald-600" />
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(file);
-            }}
-            className="p-2.5 bg-white/90 hover:bg-white text-slate-800 rounded-xl hover:scale-115 active:scale-95 transition-all shadow-sm"
-            title="Editar info"
-          >
-            <Edit3 className="w-4 h-4 text-amber-600" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(file.id);
-            }}
-            className="p-2.5 bg-white/90 hover:bg-white text-slate-800 rounded-xl hover:scale-115 active:scale-95 transition-all shadow-sm"
-            title="Eliminar"
-          >
-            <Trash2 className="w-4 h-4 text-rose-600" />
-          </button>
+          {!readOnly && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(file);
+                }}
+                className="p-2.5 bg-white/90 hover:bg-white text-slate-800 rounded-xl hover:scale-115 active:scale-95 transition-all shadow-sm"
+                title="Editar info"
+              >
+                <Edit3 className="w-4 h-4 text-amber-600" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(file.id);
+                }}
+                className="p-2.5 bg-white/90 hover:bg-white text-slate-800 rounded-xl hover:scale-115 active:scale-95 transition-all shadow-sm"
+                title="Eliminar"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 

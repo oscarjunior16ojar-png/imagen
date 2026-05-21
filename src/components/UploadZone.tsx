@@ -1,18 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Image, FileText, FileCode, CheckCircle2 } from 'lucide-react';
+import { Upload, Image, FileText, FileCode, CheckCircle2, Lock } from 'lucide-react';
 import { determineFileCategory } from '../utils';
 
 interface UploadZoneProps {
   onFilesSelected: (files: File[]) => void;
+  disabled?: boolean;
 }
 
-export default function UploadZone({ onFilesSelected }: UploadZoneProps) {
+export default function UploadZone({ onFilesSelected, disabled = false }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadSuccessFeedback, setUploadSuccessFeedback] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (disabled) return;
     setIsDragging(true);
   };
 
@@ -22,6 +24,7 @@ export default function UploadZone({ onFilesSelected }: UploadZoneProps) {
   };
 
   const processFiles = (fileList: FileList | null) => {
+    if (disabled) return;
     if (!fileList || fileList.length === 0) return;
     
     const filesArray = Array.from(fileList);
@@ -36,6 +39,7 @@ export default function UploadZone({ onFilesSelected }: UploadZoneProps) {
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (disabled) return;
     setIsDragging(false);
     processFiles(e.dataTransfer.files);
   };
@@ -45,6 +49,7 @@ export default function UploadZone({ onFilesSelected }: UploadZoneProps) {
   };
 
   const triggerFileBrowser = () => {
+    if (disabled) return;
     fileInputRef.current?.click();
   };
 
@@ -54,10 +59,12 @@ export default function UploadZone({ onFilesSelected }: UploadZoneProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer overflow-hidden group
-        ${isDragging 
-          ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01] shadow-md shadow-indigo-100 dark:shadow-none' 
-          : 'border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-900/10'
+      className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 overflow-hidden group
+        ${disabled 
+          ? 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 cursor-not-allowed' 
+          : isDragging 
+            ? 'border-indigo-505 border-indigo-500 bg-indigo-50/50 scale-[1.01] shadow-md shadow-indigo-100 dark:shadow-none cursor-pointer' 
+            : 'border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-900/10 cursor-pointer'
         }
       `}
       onClick={triggerFileBrowser}
@@ -69,6 +76,7 @@ export default function UploadZone({ onFilesSelected }: UploadZoneProps) {
         id="file-upload-input"
         className="hidden"
         onChange={handleFileInputChange}
+        disabled={disabled}
       />
 
       {/* Decorative background visual elements */}
@@ -80,7 +88,21 @@ export default function UploadZone({ onFilesSelected }: UploadZoneProps) {
       </div>
 
       <div className="flex flex-col items-center justify-center space-y-4 py-4">
-        {uploadSuccessFeedback ? (
+        {disabled ? (
+          <>
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400">
+              <Lock className="w-8 h-8 stroke-[2.2]" />
+            </div>
+            <div className="space-y-1.5 max-w-sm">
+              <p className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                Almacén en Modo Solo Lectura
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed px-4">
+                Los cambios están bloqueados para evitar cualquier modificación. Para cargar fotos o archivos, desbloquea el candado de seguridad en la barra de arriba o sal del modo compartido.
+              </p>
+            </div>
+          </>
+        ) : uploadSuccessFeedback ? (
           <div className="flex flex-col items-center space-y-2 animate-bounce">
             <div className="p-3.5 bg-emerald-100 dark:bg-emerald-950/40 rounded-full text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-8 h-8" />

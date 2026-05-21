@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Download, Tag, Calendar, FileText, HardDrive, Info, Globe, AlertCircle, FileCode } from 'lucide-react';
+import { X, Download, Tag, Calendar, FileText, HardDrive, Info, Globe, AlertCircle, FileCode, ChevronLeft, ChevronRight } from 'lucide-react';
 import { StoredFile } from '../types';
 import { formatFileSize, determineFileCategory, isTextFile } from '../utils';
 
@@ -7,21 +7,29 @@ interface PreviewModalProps {
   file: StoredFile | null;
   onClose: () => void;
   onDownload: (file: StoredFile) => void;
+  onNext?: () => void;
+  onPrev?: () => void;
 }
 
-export default function PreviewModal({ file, onClose, onDownload }: PreviewModalProps) {
+export default function PreviewModal({ file, onClose, onDownload, onNext, onPrev }: PreviewModalProps) {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [textContent, setTextContent] = useState<string>('');
   const [isLoadingText, setIsLoadingText] = useState(false);
 
-  // Keyboard navigation listener (ESC)
+  // Keyboard navigation listener (ESC, ArrowLeft, ArrowRight)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowRight' && onNext) {
+        onNext();
+      } else if (e.key === 'ArrowLeft' && onPrev) {
+        onPrev();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, onNext, onPrev]);
 
   useEffect(() => {
     if (!file) return;
@@ -77,13 +85,31 @@ export default function PreviewModal({ file, onClose, onDownload }: PreviewModal
         {/* Left Side: Visual Preview Stage (60% width on md screens) */}
         <div className="w-full md:w-3/5 bg-slate-50 dark:bg-slate-950/80 p-6 flex flex-col justify-center items-center relative border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800/60 min-h-[300px] md:h-full">
           {category === 'image' && imageUrl ? (
-            <div className="w-full h-full flex items-center justify-center group/preview">
+            <div className="w-full h-full flex items-center justify-center group/preview relative">
+              {onPrev && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onPrev(); }}
+                  className="absolute left-2 z-20 p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-800 hover:scale-110 active:scale-95 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full shadow transition-all cursor-pointer"
+                  title="Foto anterior"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
               <img
                 src={imageUrl}
                 alt={file.name}
                 className="max-w-full max-h-full rounded-2xl object-contain shadow-sm select-none"
                 referrerPolicy="no-referrer"
               />
+              {onNext && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onNext(); }}
+                  className="absolute right-2 z-20 p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-800 hover:scale-110 active:scale-95 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full shadow transition-all cursor-pointer"
+                  title="Foto siguiente"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              )}
             </div>
           ) : isTextFile(file.type, file.name) ? (
             <div className="w-full h-full flex flex-col">

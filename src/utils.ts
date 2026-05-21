@@ -54,3 +54,40 @@ export function isTextFile(mimeType: string, filename: string): boolean {
 export function createPreviewUrl(blob: Blob): string {
   return URL.createObjectURL(blob);
 }
+
+/**
+ * Converts a Blob to a Base64 string.
+ */
+export function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo blob'));
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Converts a Base64 string (including data URL headers) to a Blob.
+ */
+export function base64ToBlob(base64Data: string, type: string): Blob {
+  try {
+    // If it's a prefix url, e.g. "data:image/png;base64,..." split it
+    const parts = base64Data.split(';base64,');
+    const actualData = parts.length > 1 ? parts[1] : parts[0];
+    const contentType = parts.length > 1 ? parts[0].split(':')[1] : type;
+    
+    const binary = atob(actualData);
+    const array = [];
+    for (let i = 0; i < binary.length; i++) {
+      array.push(binary.charCodeAt(i));
+    }
+    return new Blob([new Uint8Array(array)], { type: contentType });
+  } catch (e) {
+    console.error('Error al decodificar base64 a blob', e);
+    // fallback empty blob
+    return new Blob([], { type });
+  }
+}
