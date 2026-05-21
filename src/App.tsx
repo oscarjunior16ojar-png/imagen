@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { StoredFile, FileCategory, FileStats } from './types';
 import { getAllFilesFromDB, saveFileToDB, deleteFileFromDB, updateFileFieldsInDB } from './db';
-import { determineFileCategory, formatFileSize, blobToBase64, base64ToBlob } from './utils';
+import { determineFileCategory, formatFileSize, blobToBase64, base64ToBlob, compressImageIfNeeded } from './utils';
 
 // Import our interactive components
 import UploadZone from './components/UploadZone';
@@ -186,12 +186,25 @@ export default function App() {
         const fileId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const category = determineFileCategory(rawFile.type, rawFile.name);
         
+        let finalBlob: Blob = rawFile;
+        let finalSize: number = rawFile.size;
+
+        if (category === 'image') {
+          try {
+            // Apply lightweight smart compression to guarantee it has a small size (usually under 120KB) and resides within standard URL limits beautifully.
+            finalBlob = await compressImageIfNeeded(rawFile);
+            finalSize = finalBlob.size;
+          } catch (e) {
+            console.error('No se pudo optimizar/comprimir la imagen:', e);
+          }
+        }
+        
         const storedFile: StoredFile = {
           id: fileId,
           name: rawFile.name,
           type: rawFile.type || 'application/octet-stream',
-          size: rawFile.size,
-          blob: rawFile,
+          size: finalSize,
+          blob: finalBlob,
           tags: category === 'image' ? ['foto'] : ['archivo'],
           description: '',
           createdAt: Date.now()
@@ -200,7 +213,7 @@ export default function App() {
         await saveFileToDB(storedFile);
       }
       
-      setSuccessMsg(`Se acaban de cargar y guardar tus ${newRawFiles.length} archivos en el navegador.`);
+      setSuccessMsg(`Se acaban de cargar, calificar y comprimir con éxito tus ${newRawFiles.length} archivos en el navegador.`);
       await loadFiles();
     } catch (err) {
       console.error(err);
@@ -299,26 +312,42 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  // URL Hash sharing generator (Compresses files up to 100KB to support real image sharing inline!)
+  // URL Hash sharing generator (Compresses files dynamically to support real image sharing inline!)
   const generateShareLink = async () => {
     setIsGeneratingShare(true);
     try {
       const elementsToEncode = [];
       for (const item of files) {
         let textOrB64Data = '';
-        // If file is smaller than 120KB, serialize fully as Base64 to make it travel in the link!
-        if (item.size < 120000) {
+        let fileSize = item.size;
+        let blobToEncode = item.blob;
+        
+        // Dynamic fallback: If the image is large, compress it on-the-fly to ensure it travels in the URL hash safely!
+        if (determineFileCategory(item.type, item.name) === 'image' && fileSize >= 200000) {
           try {
-            textOrB64Data = await blobToBase64(item.blob);
+            const tempFile = new File([item.blob], item.name, { type: item.type });
+            const compressedBlob = await compressImageIfNeeded(tempFile, 800, 800, 0.65);
+            blobToEncode = compressedBlob;
+            fileSize = compressedBlob.size;
+          } catch (e) {
+            console.error('No se pudo comprimir la imagen de respaldo para compartir:', e);
+          }
+        }
+
+        // If file is smaller than 200KB, serialize fully as Base64 to make it travel in the link!
+        if (fileSize < 200000) {
+          try {
+            textOrB64Data = await blobToBase64(blobToEncode);
           } catch (e) {
             console.error('Error al exportar base64', item.name, e);
           }
         }
+        
         elementsToEncode.push({
           id: item.id,
           name: item.name,
           type: item.type,
-          size: item.size,
+          size: fileSize,
           description: item.description,
           tags: item.tags,
           createdAt: item.createdAt,

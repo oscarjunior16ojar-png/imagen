@@ -91,3 +91,60 @@ export function base64ToBlob(base64Data: string, type: string): Blob {
     return new Blob([], { type });
   }
 }
+
+/**
+ * Compresses an image file client-side to ensure it is lightweight (under 120KB) and fits inside the URL sharing hash.
+ */
+export function compressImageIfNeeded(file: File, maxWidth = 900, maxHeight = 900, quality = 0.7): Promise<Blob> {
+  return new Promise((resolve) => {
+    // If it's not an image, or it's a small PNG/GIF/SVG we don't want to compress
+    if (!file.type.startsWith('image/') || file.size < 60000) {
+      resolve(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => resolve(file); // fallback to original file on error
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => resolve(file); // fallback to original file on error
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
